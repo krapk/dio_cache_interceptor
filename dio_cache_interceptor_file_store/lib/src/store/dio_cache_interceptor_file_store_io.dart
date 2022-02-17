@@ -120,6 +120,7 @@ class FileCacheStore implements CacheStore {
         response.content?.length ?? 0,
         etag.length,
         response.headers?.length ?? 0,
+        response.redirects?.length ?? 0,
         lastModified.length,
         maxStale.length,
         url.length,
@@ -132,6 +133,7 @@ class FileCacheStore implements CacheStore {
       ...response.content ?? [],
       ...etag,
       ...response.headers ?? [],
+      ...response.redirects ?? [],
       ...lastModified,
       ...maxStale,
       ...url,
@@ -151,7 +153,7 @@ class FileCacheStore implements CacheStore {
     try {
       // Get field sizes
       // 11 fields. int is encoded with 32 bits from Int8List
-      var i = 11 * 4;
+      var i = 12 * 4;
       final sizes = Int8List.fromList(
         data.take(i).toList(),
       ).buffer.asInt32List();
@@ -169,6 +171,10 @@ class FileCacheStore implements CacheStore {
       i += size;
       size = sizes[fieldIndex++];
       final headers = size != 0 ? data.skip(i).take(size).toList() : null;
+
+      i += size;
+      size = sizes[fieldIndex++];
+      final redirects = size != 0 ? data.skip(i).take(size).toList() : null;
 
       i += size;
       size = sizes[fieldIndex++];
@@ -219,6 +225,7 @@ class FileCacheStore implements CacheStore {
         eTag: etag,
         expires: expires != null ? DateTime.tryParse(expires) : null,
         headers: headers,
+        redirects: redirects,
         key: path.basename(file.path),
         lastModified: lastModified,
         maxStale: maxStale != null
@@ -236,6 +243,7 @@ class FileCacheStore implements CacheStore {
         await file.delete();
       } catch (_) {}
     }
+    return null;
   }
 
   Future<void> _deleteFile(

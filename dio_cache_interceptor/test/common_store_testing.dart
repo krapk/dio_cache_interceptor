@@ -24,6 +24,7 @@ Future<void> _addFooResponse(
     eTag: 'an etag',
     expires: expires,
     headers: headers,
+    redirects: [],
     key: key,
     lastModified: lastModified,
     maxStale: maxStale,

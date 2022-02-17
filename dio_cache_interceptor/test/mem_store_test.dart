@@ -29,6 +29,7 @@ void main() {
         eTag: 'an etag',
         expires: null,
         headers: null,
+        redirects: null,
         key: 'foo_$i',
         lastModified: null,
         maxStale: null,

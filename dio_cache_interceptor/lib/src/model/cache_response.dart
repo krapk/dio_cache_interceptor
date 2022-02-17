@@ -2,7 +2,6 @@ import 'dart:convert' show jsonDecode, jsonEncode, utf8;
 import 'dart:math';
 
 import 'package:dio/dio.dart';
-
 import 'package:dio_cache_interceptor/src/model/cache_cipher.dart';
 import 'package:dio_cache_interceptor/src/model/cache_control.dart';
 import 'package:dio_cache_interceptor/src/model/cache_options.dart';
@@ -41,6 +40,9 @@ class CacheResponse {
   /// Response headers
   List<int>? headers;
 
+  // Response redirects
+  List<int>? redirects;
+
   /// Key used by store
   final String key;
 
@@ -69,6 +71,7 @@ class CacheResponse {
     required this.eTag,
     required this.expires,
     required this.headers,
+    required this.redirects,
     required this.key,
     required this.lastModified,
     required this.maxStale,
@@ -83,6 +86,7 @@ class CacheResponse {
       data: deserializeContent(options.responseType, content),
       extra: {cacheKey: key, CacheResponse.fromNetwork: fromNetwork},
       headers: getHeaders(),
+      redirects: getRedirects(),
       statusCode: 304,
       requestOptions: options,
     );
@@ -98,6 +102,28 @@ class CacheResponse {
     decHeaders?.forEach((key, value) => h.set(key, value));
 
     return h;
+  }
+
+  List<RedirectRecord> getRedirects() {
+    final checkedRedirects = redirects;
+
+    final decRedirects = (checkedRedirects != null)
+        ? jsonDecode(utf8.decode(checkedRedirects)) as List<dynamic>
+        : null;
+
+    final r = <RedirectRecord>[];
+
+    decRedirects?.forEach(
+      (item) => r.add(
+        RedirectRecord(
+          item['statusCode'],
+          item['method'],
+          Uri.parse(item['location']),
+        ),
+      ),
+    );
+
+    return r;
   }
 
   /// Checks if response is staled from [maxStale] option.
@@ -213,6 +239,22 @@ class CacheResponse {
       utf8.encode(jsonEncode(response.headers.map)),
     );
 
+    final redirects = await CacheCipher.encryptContent(
+      options,
+      utf8.encode(
+        jsonEncode(
+          [
+            for (final item in response.redirects)
+              {
+                'location': item.location.toString(),
+                'method': item.method,
+                'statusCode': item.statusCode
+              }
+          ],
+        ),
+      ),
+    );
+
     final dateStr = response.headers[dateHeader]?.first;
     DateTime? date;
     if (dateStr != null) {
@@ -245,6 +287,7 @@ class CacheResponse {
       eTag: response.headers[etagHeader]?.first,
       expires: httpExpiresDate,
       headers: headers,
+      redirects: redirects,
       key: key,
       lastModified: response.headers[lastModifiedHeader]?.first,
       maxStale: checkedMaxStale != null
@@ -265,6 +308,7 @@ class CacheResponse {
       eTag: eTag,
       expires: expires,
       headers: headers,
+      redirects: redirects,
       key: key,
       lastModified: lastModified,
       maxStale: newMaxStale,
