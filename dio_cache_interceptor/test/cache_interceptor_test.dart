@@ -23,60 +23,6 @@ void main() {
     _dio.close();
   });
 
-  test('maxStale', () async {
-    final resp = await _dio.get(
-      '${MockHttpClientAdapter.mockBase}/ok-nodirective',
-      options: options
-          .copyWith(
-              policy: CachePolicy.forceCache,
-              maxStale: const Duration(seconds: 1))
-          .toOptions(),
-    );
-    expect(resp.statusCode, equals(200));
-    expect(resp.extra[CacheResponse.cacheKey], isNotNull);
-  });
-
-  test('maxStale removal', () async {
-    // Request for the 1st time
-    var resp = await _dio.get(
-      '${MockHttpClientAdapter.mockBase}/ok-nodirective',
-      options: options
-          .copyWith(
-            policy: CachePolicy.forceCache,
-            maxStale: const Duration(seconds: 1),
-          )
-          .toOptions(),
-    );
-    var key = resp.extra[CacheResponse.cacheKey];
-    expect(await store.exists(key), isTrue);
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Request a 2nd time to postpone stale date
-    // We wait for 2 second so the cache is now staled but we recover it
-    resp = await _dio.get(
-      '${MockHttpClientAdapter.mockBase}/ok-nodirective',
-      options: options
-          .copyWith(
-            policy: CachePolicy.forceCache,
-            maxStale: const Duration(seconds: 1),
-          )
-          .toOptions(),
-    );
-    expect(await store.exists(key), isTrue);
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Request for the last time without maxStale directive to ensure
-    // the cache entry is now deleted
-    resp = await _dio.get(
-      '${MockHttpClientAdapter.mockBase}/ok-nodirective',
-      options: options.toOptions(),
-    );
-
-    expect(await store.exists(key), isFalse);
-  });
-
   test('Fetch stream 200', () async {
     final resp = await _dio.get(
       '${MockHttpClientAdapter.mockBase}/ok-stream',
@@ -105,12 +51,12 @@ void main() {
 
   test('Fetch with cipher', () async {
     final cipherOptions = options.copyWith(
-      cipher: CacheCipher(
+      cipher: Nullable(CacheCipher(
         decrypt: (bytes) =>
             Future.value(bytes.reversed.toList(growable: false)),
         encrypt: (bytes) =>
             Future.value(bytes.reversed.toList(growable: false)),
-      ),
+      )),
     );
 
     var resp = await _dio.get(
@@ -198,7 +144,7 @@ void main() {
       options: options
           .copyWith(
             policy: CachePolicy.refresh,
-            maxStale: Duration(minutes: 10),
+            maxStale: Nullable(Duration(minutes: 10)),
           )
           .toOptions(),
     );
@@ -235,9 +181,11 @@ void main() {
       await _dio.get(
         '${MockHttpClientAdapter.mockBase}/ok',
         options: Options(
-          extra: options.copyWith(
-              hitCacheOnErrorExcept: [500],
-              policy: CachePolicy.refresh).toExtra()
+          extra: options
+              .copyWith(
+                  hitCacheOnErrorExcept: Nullable([500]),
+                  policy: CachePolicy.refresh)
+              .toExtra()
             ..addAll({'x-err': '500'}),
         ),
       );
@@ -274,10 +222,12 @@ void main() {
     final resp2 = await _dio.get(
       '${MockHttpClientAdapter.mockBase}/ok',
       options: Options(
-        extra: options.copyWith(
-          hitCacheOnErrorExcept: [],
-          policy: CachePolicy.refresh,
-        ).toExtra()
+        extra: options
+            .copyWith(
+              hitCacheOnErrorExcept: Nullable([]),
+              policy: CachePolicy.refresh,
+            )
+            .toExtra()
           ..addAll({'x-err': '500'}),
       ),
     );
@@ -294,9 +244,7 @@ void main() {
     final resp2 = await _dio.get(
       '${MockHttpClientAdapter.mockBase}/exception',
       options: Options(
-        extra: options.copyWith(
-          hitCacheOnErrorExcept: [],
-        ).toExtra()
+        extra: options.copyWith(hitCacheOnErrorExcept: Nullable([])).toExtra()
           ..addAll({'x-err': '500'}),
       ),
     );
