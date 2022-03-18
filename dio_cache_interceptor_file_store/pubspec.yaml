@@ -10,7 +10,7 @@ environment:
 dependencies:
   dio_cache_interceptor:
     git:
-      url: git://github.com/krapk/dio_cache_interceptor.git
+      url: https://github.com/krapk/dio_cache_interceptor
       path: dio_cache_interceptor
 
   # https://pub.dev/packages/path
